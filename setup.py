@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='py-toolkit',
-    version='0.0.2',
+    version='0.0.3',
     packages=find_packages(exclude=("tests",)),
     url='https://github.com/DewMaple/toolkit',
     description='python toolkit for common usage',
