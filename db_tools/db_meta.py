@@ -15,12 +15,13 @@ class MetaExporter:
         if not db_url:
             raise ValueError("Database connection config should not be None")
 
-        self.init_db(db_url)
+        cls = self.__class__
+        cls.init_db(db_url)
         if headers:
-            self.headers = headers
+            cls.headers = headers
 
         if row_mapper:
-            self.row_mapper = row_mapper
+            cls.row_mapper = row_mapper
 
     @classmethod
     def init_db(cls, db_url):
