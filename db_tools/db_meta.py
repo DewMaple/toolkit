@@ -10,6 +10,7 @@ class MetaExporter:
                      "is_primary", "is_nullable", "comment"]
     row_mapper: dict = {}
     db = None
+    _database = None
 
     def __init__(self, db_url: str, headers=None, row_mapper=None):
         if not db_url:
@@ -27,6 +28,15 @@ class MetaExporter:
     def init_db(cls, db_url):
         cls.db = Proxy()
         cls.db.initialize(connect(db_url))
+        cls._database = cls._parse_database(db_url)
+
+    @classmethod
+    def _parse_database(cls, db_url: str):
+        start = db_url.rindex("/")
+        end = db_url.rfind("?")
+        if end < 1:
+            end = len(db_url)
+        return db_url[start + 1:end]
 
     def export(self, file_name: str = "tables.xlsx"):
         wb, ws = self._init_xlsx()
@@ -93,20 +103,15 @@ class MetaExporter:
     @classmethod
     def fetch_schema_meta(cls):
         sql = (
-            "SELECT c.TABLE_SCHEMA, "
-            "   c.TABLE_NAME, "
-            "   c.COLUMN_NAME, "
-            "   c.COLUMN_COMMENT, "
-            "   c.COLUMN_TYPE, "
-            "   c.CHARACTER_MAXIMUM_LENGTH, "
-            "   IF(kcu.ORDINAL_POSITION IS NOT NULL,'Yes',' ') AS 'is_primary', "
-            "   IF(c.IS_NULLABLE='YES','Yes',' ') AS 'is_nullable', "
-            "   COLUMN_COMMENT "
-            "FROM information_schema.columns c "
-            "LEFT JOIN information_schema.key_column_usage kcu ON kcu.TABLE_SCHEMA='lms_test' "
-            "         AND c.TABLE_NAME = kcu.TABLE_NAME "
-            "         AND c.COLUMN_NAME = kcu.COLUMN_NAME "
-            "WHERE c.TABLE_SCHEMA='lms_test'"
+            f"SELECT c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.COLUMN_COMMENT, c.COLUMN_TYPE, "
+            f"   c.CHARACTER_MAXIMUM_LENGTH, "
+            f"   IF(c.COLUMN_KEY='PRI','Yes',' ') AS 'is_primary', "
+            f"   IF(c.IS_NULLABLE='YES','Yes',' ') AS 'is_nullable', "
+            f"   COLUMN_COMMENT "
+            f"FROM information_schema.columns c "
+            f"LEFT JOIN information_schema.key_column_usage kcu ON kcu.TABLE_SCHEMA='{cls._database}' "
+            f"         AND c.TABLE_NAME = kcu.TABLE_NAME AND c.COLUMN_NAME = kcu.COLUMN_NAME "
+            f"WHERE c.TABLE_SCHEMA='{cls._database}'"
         )
         res = cls.db.execute_sql(sql)
         return res.fetchall()
